@@ -10,10 +10,10 @@ from subprocess import Popen, PIPE
 import time
 import random
 import sys
+from time import gmtime, strftime
 
-
-reload(sys)
-sys.setdefaultencoding('utf8')
+#reload(sys)
+#sys.setdefaultencoding('utf8')
 
 class YSender(object):
 	def __init__(self):
@@ -22,7 +22,7 @@ class YSender(object):
 		self.timers = [1,3,2,4,7,5,6,9]
 
 		# numero que vai enviar as mensagens 
-		self.nfrom = "#################"
+		self.nfrom = "###################"
 		# ao registrar o numero com o yowsup vc gera uma senha
 		self.pwd = "Ixhn0YDeTIltd7TiFs6gTP2TRPg="
 
@@ -31,6 +31,9 @@ class YSender(object):
 		self.numeros = []
 		self.fails = []
 		self.success = []
+
+		# nome do arquivo de log
+		self.log_file = ""
 
 	# funçao para pegar os numeros do arquivo CSV	
 	def getNumbers(self):
@@ -54,31 +57,42 @@ class YSender(object):
 
 		return random.choice(mensagens)
 
+	# escreve arquivo de log
+	def logToFile(self, log, n=0):
+		file = open(self.log_file, "a")
+		if not n == 0:
+			file.write(">> %s - %s" % (n,log))
+		else:
+			file.write(log+"\n")
+		file.close()
+		return
+
 	# mostra o relatorio de quantos envios foram bem 
 	# sucedidos e quantos falharam	
 	def report(self):
 		if len(self.success) > 0:
-			print("\n A mensagem foi entregue a %d numeros >" % len(self.success))
+			msg = "\n A mensagem foi entregue a %d numeros >" % len(self.success)
+			self.logToFile(msg)
+			print(msg)
 
 		if len(self.fails) > 0:
-			print("\n A mensagem nao foi entregue a %d numeros >" % len(self.fails))
+			msg = "\n A mensagem nao foi entregue a %d numeros >" % len(self.fails)
+			self.logToFile(msg)
+			print(msg)
 			for f in self.fails:
 				print("-- %s" % f)					
 	
-	# escreve arquivo de log
-	def logToFile(self, log, n):
-		file = open("log.txt", "w")
-		file.write(">> %s - %s" % (n,log))
-		file.close()
-		return
-
 	# envia as mensagens	
 	def send(self):	
+		self.getNumbers()
 		i = 0
 
-		self.getNumbers()
-		print("------------------------------------------------------\n>>>>Iniciando envio para %d numeros" % len(self.numeros))
-		
+		# inicia arquivo de log
+		self.log_file = strftime("%Y-%m-%d&%Hh%Mm%Ss.log", gmtime())
+		msg = ">>>>Iniciando envio para %d numeros" % len(self.numeros)
+		self.logToFile(msg)
+		print(msg)
+
 		for n in self.numeros:
 			if not n == "-":
 				i += 1
@@ -90,7 +104,11 @@ class YSender(object):
 				
 				# aqui e onde o envio acontece, executando um comando da 
 				# CLI do Yowsup
-				cmd = "yowsup-cli demos -l %s -s %s '%s'" % (l, n, self.getMessage())
+				
+				# no windows
+				cmd = "python ../yowsup/yowsup-cli demos -l %s -s %s '%s'" % (l, n, self.getMessage())
+				# no linux
+				# cmd = "yowsup-cli demos -l %s -s %s '%s'" % (l, n, self.getMessage())
 				r = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
 				out, status = r.communicate()
 
