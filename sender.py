@@ -1,13 +1,16 @@
+# -*- coding: utf-8 -*-
+
 # ENVIANDO MENSAGENS PARA MULTIPLOS NUMEROS
 # 
 # Importante consultar o arquivo README.md
 
-# -*- coding: utf-8 -*-
+
 import csv
-import subprocess
+from subprocess import Popen, PIPE
 import time
 import random
 import sys
+
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -19,8 +22,8 @@ class YSender(object):
 		self.timers = [1,3,2,4,7,5,6,9]
 
 		# numero que vai enviar as mensagens 
-		self.nfrom = "##########"
-		# ao registrar o numero com o yowsup vc pega uma senha
+		self.nfrom = "#################"
+		# ao registrar o numero com o yowsup vc gera uma senha
 		self.pwd = "Ixhn0YDeTIltd7TiFs6gTP2TRPg="
 
 		# irao guardar os numeros retirados do arquivos, e
@@ -59,14 +62,24 @@ class YSender(object):
 
 		if len(self.fails) > 0:
 			print("\n A mensagem nao foi entregue a %d numeros >" % len(self.fails))
-			for f in fails:
+			for f in self.fails:
 				print("-- %s" % f)					
 	
+	# escreve arquivo de log
+	def logToFile(self, log, n):
+		file = open("log.txt", "w")
+		file.write(">> %s - %s" % (n,log))
+		file.close()
+		return
+
 	# envia as mensagens	
 	def send(self):	
 		i = 0
+
+		self.getNumbers()
 		print("------------------------------------------------------\n>>>>Iniciando envio para %d numeros" % len(self.numeros))
-		for n in self.getNumbers():
+		
+		for n in self.numeros:
 			if not n == "-":
 				i += 1
 				
@@ -78,10 +91,14 @@ class YSender(object):
 				# aqui e onde o envio acontece, executando um comando da 
 				# CLI do Yowsup
 				cmd = "yowsup-cli demos -l %s -s %s '%s'" % (l, n, self.getMessage())
-				r = subprocess.call(cmd, shell=True)
+				r = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+				out, status = r.communicate()
+
+				self.logToFile(status, n)
+				#r = subprocess.call(cmd, shell=True)
 				
 				# verifica se o envio foi bem sucedido e registra
-				if r != 0:
+				if r.returncode != 0:
 					self.fails.append(n) 
 					print("O envio para %s falhou" % n)
 				else:
